@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(to right, #00c6ff, #0072ff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background 0.5s ease;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 900px;
+      text-align: center;
+      padding: 20px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 15px;
+      color: white;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .search input {
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      width: 65%;
+    }
+
+    .search button {
+      padding: 10px 15px;
+      border-radius: 5px;
+      border: none;
+      background-color: gold;
+      color: black;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+
+    .search button:hover {
+      background-color: orange;
+    }
+
+    .cards-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+      gap: 15px;
+    }
+
+    .weather-card {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 20px;
+      width: 220px;
+      transition: transform 0.3s ease, background 0.3s ease;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    .weather-card:hover {
+      transform: scale(1.05);
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .weather-card img {
+      width: 80px;
+      height: 80px;
+    }
+
+    .forecast {
+      margin-top: 10px;
+      font-size: 0.85em;
+      text-align: left;
+    }
+
+    .forecast ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .forecast li {
+      margin-bottom: 5px;
+    }
+
+    @media(max-width: 600px){
+      .weather-card {
+        width: 90%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Weather Dashboard</h1>
+
+    <div class="search">
+      <input type="text" id="cityInput" placeholder="Enter city name">
+      <button id="searchBtn">Search</button>
+    </div>
+
+    <div id="cardsContainer" class="cards-container"></div>
+  </div>
+
+  <script>
+    const apiKey = "YOUR_OPENWEATHERMAP_API_KEY"; // Replace with your API key
+    const searchBtn = document.getElementById("searchBtn");
+    const cityInput = document.getElementById("cityInput");
+    const cardsContainer = document.getElementById("cardsContainer");
+
+    searchBtn.addEventListener("click", () => {
+      const city = cityInput.value.trim();
+      if(city) {
+        addCityWeather(city);
+        cityInput.value = "";
+      }
+    });
+
+    async function addCityWeather(city) {
+      try {
+        const weatherRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`);
+        const weatherData = await weatherRes.json();
+
+        if(weatherData.cod !== 200) {
+          alert(weatherData.message);
+          return;
+        }
+
+        const forecastRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`);
+        const forecastData = await forecastRes.json();
+
+        const card = document.createElement("div");
+        card.className = "weather-card";
+
+        card.innerHTML = `
+          <h2>${weatherData.name}, ${weatherData.sys.country}</h2>
+          <img src="http://openweathermap.org/img/wn/${weatherData.weather[0].icon}@2x.png" alt="">
+          <p>${weatherData.weather[0].description}</p>
+          <p>Temp: ${weatherData.main.temp} °C</p>
+          <p>Humidity: ${weatherData.main.humidity}%</p>
+          <p>Wind: ${weatherData.wind.speed} m/s</p>
+          <div class="forecast">
+            <h3>5-day Forecast:</h3>
+            ${generateForecastHTML(forecastData)}
+          </div>
+        `;
+
+        cardsContainer.appendChild(card);
+
+        updateBackground(weatherData.weather[0].main);
+
+      } catch (error) {
+        alert("Error fetching weather data.");
+        console.error(error);
+      }
+    }
+
+    function generateForecastHTML(data) {
+      const daily = data.list.filter(item => item.dt_txt.includes("12:00:00"));
+      let html = "<ul>";
+      daily.forEach(day => {
+        html += `<li>${day.dt_txt.split(" ")[0]} - ${day.main.temp} °C - ${day.weather[0].main}</li>`;
+      });
+      html += "</ul>";
+      return html;
+    }
+
+    function updateBackground(weather) {
+      switch(weather.toLowerCase()) {
+        case 'clear':
+          document.body.style.background = "linear-gradient(to right, #fceabb, #f8b500)";
+          break;
+        case 'clouds':
+          document.body.style.background = "linear-gradient(to right, #bdc3c7, #2c3e50)";
+          break;
+        case 'rain':
+        case 'drizzle':
+          document.body.style.background = "linear-gradient(to right, #4e54c8, #8f94fb)";
+          break;
+        case 'thunderstorm':
+          document.body.style.background = "linear-gradient(to right, #141e30, #243b55)";
+          break;
+        case 'snow':
+          document.body.style.background = "linear-gradient(to right, #e6dada, #274046)";
+          break;
+        default:
+          document.body.style.background = "linear-gradient(to right, #00c6ff, #0072ff)";
+      }
+    }
+  </script>
+</body>
+</html>
