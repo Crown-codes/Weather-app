@@ -13,7 +13,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      transition: background 0.5s ease;
+      transition: background 1s ease;
     }
 
     .container {
@@ -30,11 +30,19 @@
       margin-bottom: 20px;
     }
 
+    .search {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
     .search input {
       padding: 10px;
       border-radius: 5px;
       border: none;
       width: 65%;
+      min-width: 150px;
     }
 
     .search button {
@@ -44,11 +52,17 @@
       background-color: gold;
       color: black;
       cursor: pointer;
-      margin-left: 5px;
     }
 
     .search button:hover {
       background-color: orange;
+    }
+
+    #loader {
+      display: none;
+      margin-top: 20px;
+      font-size: 1.2em;
+      color: gold;
     }
 
     .cards-container {
@@ -91,13 +105,21 @@
     }
 
     .forecast li {
+      display: flex;
+      align-items: center;
       margin-bottom: 5px;
+      gap: 5px;
     }
 
     @media(max-width: 600px){
       .weather-card {
         width: 90%;
       }
+    }
+
+    @media(max-width: 400px){
+      .search input { width: 100%; margin-bottom: 5px; }
+      .search button { width: 100%; }
     }
   </style>
 </head>
@@ -110,6 +132,7 @@
       <button id="searchBtn">Search</button>
     </div>
 
+    <div id="loader">Loading...</div>
     <div id="cardsContainer" class="cards-container"></div>
   </div>
 
@@ -118,7 +141,15 @@
     const searchBtn = document.getElementById("searchBtn");
     const cityInput = document.getElementById("cityInput");
     const cardsContainer = document.getElementById("cardsContainer");
+    const loader = document.getElementById("loader");
 
+    // Load saved cities from localStorage
+    window.addEventListener("load", () => {
+      const savedCities = JSON.parse(localStorage.getItem("cities") || "[]");
+      savedCities.forEach(city => addCityWeather(city));
+    });
+
+    // Search button click
     searchBtn.addEventListener("click", () => {
       const city = cityInput.value.trim();
       if(city) {
@@ -127,16 +158,30 @@
       }
     });
 
+    // Enter key support
+    cityInput.addEventListener("keypress", (e) => {
+      if(e.key === "Enter") searchBtn.click();
+    });
+
     async function addCityWeather(city) {
       try {
+        loader.style.display = "block";
+
+        // Remove duplicate city card
+        const existingCard = [...cardsContainer.children].find(c => c.querySelector("h2")?.textContent.startsWith(city));
+        if(existingCard) existingCard.remove();
+
+        // Fetch current weather
         const weatherRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`);
         const weatherData = await weatherRes.json();
 
         if(weatherData.cod !== 200) {
-          alert(weatherData.message);
+          showErrorCard(city, weatherData.message);
+          loader.style.display = "none";
           return;
         }
 
+        // Fetch forecast
         const forecastRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`);
         const forecastData = await forecastRes.json();
 
@@ -157,12 +202,14 @@
         `;
 
         cardsContainer.appendChild(card);
-
         updateBackground(weatherData.weather[0].main);
+        saveCities();
 
       } catch (error) {
         alert("Error fetching weather data.");
         console.error(error);
+      } finally {
+        loader.style.display = "none";
       }
     }
 
@@ -170,7 +217,11 @@
       const daily = data.list.filter(item => item.dt_txt.includes("12:00:00"));
       let html = "<ul>";
       daily.forEach(day => {
-        html += `<li>${day.dt_txt.split(" ")[0]} - ${day.main.temp} °C - ${day.weather[0].main}</li>`;
+        html += `<li>
+          <span>${day.dt_txt.split(" ")[0]}</span>
+          <img src="http://openweathermap.org/img/wn/${day.weather[0].icon}.png" alt="">
+          <span>${day.main.temp} °C - ${day.weather[0].main}</span>
+        </li>`;
       });
       html += "</ul>";
       return html;
@@ -197,6 +248,18 @@
         default:
           document.body.style.background = "linear-gradient(to right, #00c6ff, #0072ff)";
       }
+    }
+
+    function showErrorCard(city, message) {
+      const errorCard = document.createElement("div");
+      errorCard.className = "weather-card";
+      errorCard.innerHTML = `<h2>${city}</h2><p style="color: red;">${message}</p>`;
+      cardsContainer.appendChild(errorCard);
+    }
+
+    function saveCities() {
+      const cities = [...cardsContainer.children].map(c => c.querySelector("h2").textContent.split(",")[0]);
+      localStorage.setItem("cities", JSON.stringify(cities));
     }
   </script>
 </body>
