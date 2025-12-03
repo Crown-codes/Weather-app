@@ -172,7 +172,7 @@
         if(existingCard) existingCard.remove();
 
         // Fetch current weather
-        const weatherRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`);
+        const weatherRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${Jamshedpur}&appid=${c22d98608721a805e67911baea9e1c41}&units=metric`);
         const weatherData = await weatherRes.json();
 
         if(weatherData.cod !== 200) {
@@ -264,4 +264,5 @@
   </script>
 </body>
 </html>
+
 
